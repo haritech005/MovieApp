@@ -4,7 +4,7 @@ import "./index.css";
 import Spinner from "./components/Spinner";
 import MovieCard from "./components/MovieCard";
 import { useDebounce } from "react-use";
-import { updateSearchCount } from "./appwrite";
+import { getTrendingMovies, updateSearchCount } from "./appwrite";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
 
@@ -23,6 +23,7 @@ const App = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [movieList, setMovieList] = useState([]);
   const [loader, setLoader] = useState(false);
+  const [trendingMovies,setTrendingMovies] = useState([])
   const [debouncedSearchTerm,setDebouncedSearchTerm] = useState('')
   useDebounce(() =>setDebouncedSearchTerm(searchTerm),500,[searchTerm])
   const fetchMovies = async (query='') => {
@@ -44,7 +45,9 @@ const App = () => {
       }
       setMovieList(data.results || []);
       console.log(data);
-      updateSearchCount()
+      if(query && data.results.length>0){
+        await updateSearchCount(query,data.results[0])
+      }
     } catch (error) {
       console.error(error);
       setErrorMessage("Error In Fetching Movies Please Try Again Later");
@@ -53,9 +56,23 @@ const App = () => {
     }
   };
 
+  const loadTrendingMovies = async ()=>{
+    try{
+      const movies = getTrendingMovies
+      setTrendingMovies(movies)
+
+    }
+    catch(error){
+      console.error(`error in fetching movies ${error}`)
+    }
+  }
   useEffect(() => {
     fetchMovies(debouncedSearchTerm);
   }, [debouncedSearchTerm]);
+
+  useEffect(()=>{
+    loadTrendingMovies()
+  },[])
 
   return (
     <main>
@@ -69,8 +86,22 @@ const App = () => {
           </h1>
           <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </header>
+        {trendingMovies.length > 0 && (
+          <section className="trending">
+            <h2>Trending Movies</h2>
+
+            <ul>
+              {trendingMovies.map((movie, index) => (
+                <li key={movie.$id}>
+                  <p>{index + 1}</p>
+                  <img src={movie.poster_url} alt={movie.title} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         <section className="all-movies">
-          <h2 className="mt-[40px]">All Movies</h2>
+          <h2>All Movies</h2>
           {loader ? (
            <Spinner/>
           ) : errorMessage ? (
